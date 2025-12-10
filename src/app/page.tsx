@@ -1,7 +1,7 @@
 'use client';
 
 import StudentForm from '@/components/student/student-form';
-import StudentList from '@/components/student/student-list';
+import StudentTable from '@/components/student/student-table';
 import { Student } from '@/db/schema';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -71,7 +71,7 @@ const HomePage = () => {
     <div className="container mx-auto p-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <StudentList
+          <StudentTable
             students={students}
             loading={loading}
             onDelete={handleDelete}

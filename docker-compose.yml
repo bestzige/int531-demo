@@ -48,17 +48,6 @@ services:
       DATABASE_URL: "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mariadb:3306/${MYSQL_DATABASE}"
     ports:
       - "3000:3000"
-    command: >
-      sh -c "
-        echo '[app] wait mariadb:3306...';
-        npx wait-port mariadb:3306 --timeout=60 -- echo ready;
-        echo '[app] generate migrations (drizzle-kit)...';
-        npx drizzle-kit generate --schema=./src/db/schema.ts --out=./drizzle --dialect=mysql || true;
-        echo '[app] apply migrations...';
-        npx drizzle-kit migrate --url=\"$${DATABASE_URL}\" || true;
-        echo '[app] start server';
-        node server.js
-      "
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/ || exit 1"]
       interval: 10s
