@@ -46,7 +46,6 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mariadb:3306/${MYSQL_DATABASE}"
-      NEXT_PUBLIC_API_BASE: "http://localhost:3000"
     ports:
       - "3000:3000"
     command: >
