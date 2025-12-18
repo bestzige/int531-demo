@@ -23,7 +23,7 @@ services:
       retries: 10
       start_period: 40s
     volumes:
-      - ./x-data/mariadb:/var/lib/mysql
+      - mariadb-data:/var/lib/mysql
       - ./drizzle:/docker-entrypoint-initdb.d:ro
     networks:
       - sre-network
@@ -71,3 +71,6 @@ services:
 networks:
   sre-network:
     external: true
+
+volumes:
+  mariadb-data:
