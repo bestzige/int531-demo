@@ -38,6 +38,8 @@ services:
       DATA_SOURCE_NAME: "root:${MYSQL_ROOT_PASSWORD}@tcp(mariadb:3306)/"
     ports:
       - "9104:9104"
+    volumes:
+      - ./x-docker/mariadb-exporter/my.cnf:/etc/.my.cnf:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9104/metrics || exit 1"]
       interval: 10s
