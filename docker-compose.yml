@@ -1,14 +1,8 @@
-networks:
-  sre-network:
-    driver: bridge
-
 services:
   mariadb:
     image: mariadb:latest
     container_name: x-mariadb
     restart: unless-stopped
-    networks:
-      - sre-network
     ports:
       - "3306:3306"
     environment:
@@ -31,6 +25,26 @@ services:
     volumes:
       - ./x-data/mariadb:/var/lib/mysql
       - ./drizzle:/docker-entrypoint-initdb.d:ro
+    networks:
+      - sre-network
+
+  mariadb-exporter:
+    image: prom/mysqld-exporter:latest
+    container_name: x-mariadb-exporter
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    environment:
+      DATA_SOURCE_NAME: "root:${MYSQL_ROOT_PASSWORD}@tcp(mariadb:3306)/"
+    ports:
+      - "9104:9104"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9104/metrics || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - sre-network
 
   app:
     build:
@@ -46,12 +60,14 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mariadb:3306/${MYSQL_DATABASE}"
-    ports: 
+    ports:
       - "80:3000"
-      - "443:3000"
-      - "3000:3000"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
+
+networks:
+  sre-network:
+    driver: bridge
