@@ -4,6 +4,9 @@ import { withMetrics } from '@/lib/withMetrics';
 import { eq, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 const handler = async (req: NextRequest, id: string): Promise<NextResponse> => {
   if (req.method === 'GET') {
     const [student] = await db
