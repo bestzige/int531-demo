@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-
 import {
   activeRequests,
   httpRequestDurationSeconds,
@@ -10,31 +9,28 @@ import {
 export const withMetrics =
   (handler: (req: NextRequest) => Promise<NextResponse>) =>
   async (req: NextRequest) => {
-    const start = process.hrtime();
+    const start = process.hrtime.bigint();
     activeRequests.inc();
+
     try {
       const res = await handler(req);
 
-      const diff = process.hrtime(start);
-      const duration = diff[0] + diff[1] / 1e9;
+      const durationSeconds = Number(process.hrtime.bigint() - start) / 1e9;
 
-      httpRequestsTotal.inc({
+      const url = new URL(req.url);
+      const route = url.pathname;
+
+      const labels = {
         method: req.method,
-        route: req.url || '/',
-        status: res.status,
-      });
+        route,
+        status: String(res.status),
+      };
 
-      httpRequestDurationSeconds.observe(
-        { method: req.method, route: req.url || '/', status: res.status },
-        duration
-      );
+      httpRequestsTotal.inc(labels);
+      httpRequestDurationSeconds.observe(labels, durationSeconds);
 
       if (res.status >= 500) {
-        httpRequestsErrorsTotal.inc({
-          method: req.method,
-          route: req.url || '/',
-          status: res.status,
-        });
+        httpRequestsErrorsTotal.inc(labels);
       }
 
       return res;
