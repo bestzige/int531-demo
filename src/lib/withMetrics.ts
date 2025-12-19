@@ -1,67 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  activeRequests,
-  httpRequestDurationSeconds,
-  httpRequestsErrorsTotal,
-  httpRequestsTotal,
+  apiHttpRequestDurationSeconds,
+  apiHttpRequestsErrorsTotal,
+  apiHttpRequestsInFlight,
+  apiHttpRequestsTotal,
 } from './metrics';
+
+const normalizeRoute = (req: NextRequest): string => {
+  return req.nextUrl.pathname || 'unknown';
+};
 
 export const withMetrics =
   (handler: (req: NextRequest) => Promise<NextResponse>) =>
   async (req: NextRequest): Promise<NextResponse> => {
     const start = process.hrtime.bigint();
-    activeRequests.inc();
+    apiHttpRequestsInFlight.inc();
 
     const method = req.method;
-    const route = req.nextUrl.pathname;
+    const route = normalizeRoute(req);
 
     try {
       const res = await handler(req);
 
-      const duration = Number(process.hrtime.bigint() - start) / 1e9;
+      const durationSeconds = Number(process.hrtime.bigint() - start) / 1e9;
 
-      httpRequestsTotal.inc({
+      const labels = {
         method,
         route,
-        status: res.status,
-      });
+        status: String(res.status),
+      };
 
-      httpRequestDurationSeconds.observe(
-        { method, route, status: res.status },
-        duration
-      );
+      // Traffic
+      apiHttpRequestsTotal.inc(labels);
 
-      if (res.status >= 400) {
-        httpRequestsErrorsTotal.inc({
-          method,
-          route,
-          status: res.status,
-        });
+      // Latency
+      apiHttpRequestDurationSeconds.observe(labels, durationSeconds);
+
+      // Errors
+      if (res.status >= 500) {
+        apiHttpRequestsErrorsTotal.inc(labels);
       }
 
       return res;
     } catch (err) {
-      const duration = Number(process.hrtime.bigint() - start) / 1e9;
+      const durationSeconds = Number(process.hrtime.bigint() - start) / 1e9;
 
-      httpRequestsTotal.inc({
+      const labels = {
         method,
         route,
-        status: 500,
-      });
+        status: '500',
+      };
 
-      httpRequestDurationSeconds.observe(
-        { method, route, status: 500 },
-        duration
-      );
-
-      httpRequestsErrorsTotal.inc({
-        method,
-        route,
-        status: 500,
-      });
+      apiHttpRequestsTotal.inc(labels);
+      apiHttpRequestDurationSeconds.observe(labels, durationSeconds);
+      apiHttpRequestsErrorsTotal.inc(labels);
 
       throw err;
     } finally {
-      activeRequests.dec();
+      apiHttpRequestsInFlight.dec();
     }
   };
