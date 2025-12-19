@@ -4,8 +4,12 @@ type Params = {
   statusCode: string;
 };
 
-const handler = async (req: NextRequest, { params }: { params: Params }) => {
-  const code = Number(params.statusCode);
+const handler = async (
+  req: NextRequest,
+  { params }: { params: Promise<Params> }
+) => {
+  const { statusCode } = await params;
+  const code = Number(statusCode);
 
   if (!Number.isInteger(code) || code < 100 || code > 599) {
     return NextResponse.json({ error: 'Invalid status code' }, { status: 400 });
