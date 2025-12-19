@@ -1,3 +1,4 @@
+import WebVitals from '@/components/web-vitals';
 import { cn } from '@/lib/utils';
 import { Kanit } from 'next/font/google';
 import { Toaster } from 'sonner';
@@ -30,6 +31,7 @@ export default function RootLayout({
           'min-h-screen bg-background font-sans antialiased'
         )}
       >
+        <WebVitals />
         {children}
         <Toaster />
       </body>

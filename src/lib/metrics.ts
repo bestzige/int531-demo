@@ -58,3 +58,29 @@ export const apiHttpRequestsInFlight = new client.Gauge({
   help: 'Number of HTTP requests currently being processed',
 });
 register.registerMetric(apiHttpRequestsInFlight);
+
+/*========================== FRONTEND METRICS ==========================*/
+// Traffic
+export const frontendRequests = new client.Counter({
+  name: 'frontend_requests_total',
+  help: 'Total frontend requests',
+  labelNames: ['type'],
+});
+register.registerMetric(frontendRequests);
+
+// Errors
+export const frontendErrors = new client.Counter({
+  name: 'frontend_errors_total',
+  help: 'Total frontend errors',
+  labelNames: ['type'],
+});
+register.registerMetric(frontendErrors);
+
+// Latency
+export const frontendLatency = new client.Histogram({
+  name: 'frontend_latency_seconds',
+  help: 'Frontend latency',
+  labelNames: ['type'],
+  buckets: [0.1, 0.3, 0.5, 1, 2, 5],
+});
+register.registerMetric(frontendLatency);
