@@ -6,9 +6,9 @@ import {
   apiHttpRequestsTotal,
 } from './metrics';
 
-type AppRouteHandler<TCtx = unknown> = (
+export type AppRouteHandler<TCtx = unknown> = (
   req: NextRequest,
-  ctx: TCtx
+  ctx?: TCtx
 ) => Promise<NextResponse>;
 
 const normalizeRoute = (req: NextRequest): string => {
@@ -17,7 +17,7 @@ const normalizeRoute = (req: NextRequest): string => {
 
 export const withMetrics =
   <TCtx = unknown>(handler: AppRouteHandler<TCtx>) =>
-  async (req: NextRequest, ctx: TCtx): Promise<NextResponse> => {
+  async (req: NextRequest, ctx?: TCtx): Promise<NextResponse> => {
     const start = process.hrtime.bigint();
     apiHttpRequestsInFlight.inc();
 

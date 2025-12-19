@@ -5,11 +5,8 @@ type Params = {
   statusCode: string;
 };
 
-const handler = async (
-  req: NextRequest,
-  { params }: { params: Promise<Params> }
-) => {
-  const { statusCode } = await params;
+const handler = async (req: NextRequest, ctx?: { params: Promise<Params> }) => {
+  const { statusCode } = await ctx!.params;
   const code = Number(statusCode);
 
   if (!Number.isInteger(code) || code < 100 || code > 599) {
