@@ -1,3 +1,4 @@
+import { withMetrics } from '@/lib/withMetrics';
 import { NextRequest, NextResponse } from 'next/server';
 
 type Params = {
@@ -29,8 +30,8 @@ const handler = async (
   );
 };
 
-export const GET = handler;
-export const POST = handler;
-export const PUT = handler;
-export const PATCH = handler;
-export const DELETE = handler;
+export const GET = withMetrics(handler);
+export const POST = withMetrics(handler);
+export const PUT = withMetrics(handler);
+export const PATCH = withMetrics(handler);
+export const DELETE = withMetrics(handler);

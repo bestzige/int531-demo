@@ -6,13 +6,18 @@ import {
   apiHttpRequestsTotal,
 } from './metrics';
 
+type AppRouteHandler<TCtx = unknown> = (
+  req: NextRequest,
+  ctx: TCtx
+) => Promise<NextResponse>;
+
 const normalizeRoute = (req: NextRequest): string => {
   return req.nextUrl.pathname || 'unknown';
 };
 
 export const withMetrics =
-  (handler: (req: NextRequest) => Promise<NextResponse>) =>
-  async (req: NextRequest): Promise<NextResponse> => {
+  <TCtx = unknown>(handler: AppRouteHandler<TCtx>) =>
+  async (req: NextRequest, ctx: TCtx): Promise<NextResponse> => {
     const start = process.hrtime.bigint();
     apiHttpRequestsInFlight.inc();
 
@@ -20,7 +25,7 @@ export const withMetrics =
     const route = normalizeRoute(req);
 
     try {
-      const res = await handler(req);
+      const res = await handler(req, ctx);
 
       const durationSeconds = Number(process.hrtime.bigint() - start) / 1e9;
 
@@ -30,13 +35,9 @@ export const withMetrics =
         status: String(res.status),
       };
 
-      // Traffic
       apiHttpRequestsTotal.inc(labels);
-
-      // Latency
       apiHttpRequestDurationSeconds.observe(labels, durationSeconds);
 
-      // Errors
       if (res.status >= 500) {
         apiHttpRequestsErrorsTotal.inc(labels);
       }
