@@ -1,44 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
-
 import {
-  activeRequests,
-  httpRequestDurationSeconds,
-  httpRequestsErrorsTotal,
-  httpRequestsTotal,
+  apiHttpRequestDurationSeconds,
+  apiHttpRequestsErrorsTotal,
+  apiHttpRequestsInFlight,
+  apiHttpRequestsTotal,
 } from './metrics';
 
+export type AppRouteHandler<TCtx = unknown> = (
+  req: NextRequest,
+  ctx?: TCtx
+) => Promise<NextResponse>;
+
+const normalizeRoute = (req: NextRequest): string => {
+  return req.nextUrl.pathname || 'unknown';
+};
+
 export const withMetrics =
-  (handler: (req: NextRequest) => Promise<NextResponse>) =>
-  async (req: NextRequest) => {
-    const start = process.hrtime();
-    activeRequests.inc();
+  <TCtx = unknown>(handler: AppRouteHandler<TCtx>) =>
+  async (req: NextRequest, ctx?: TCtx): Promise<NextResponse> => {
+    const start = process.hrtime.bigint();
+    apiHttpRequestsInFlight.inc();
+
+    const method = req.method;
+    const route = normalizeRoute(req);
+
     try {
-      const res = await handler(req);
+      const res = await handler(req, ctx);
 
-      const diff = process.hrtime(start);
-      const duration = diff[0] + diff[1] / 1e9;
+      const durationSeconds = Number(process.hrtime.bigint() - start) / 1e9;
 
-      httpRequestsTotal.inc({
-        method: req.method,
-        route: req.url || '/',
-        status: res.status,
-      });
+      const labels = {
+        method,
+        route,
+        status: String(res.status),
+      };
 
-      httpRequestDurationSeconds.observe(
-        { method: req.method, route: req.url || '/', status: res.status },
-        duration
-      );
+      apiHttpRequestsTotal.inc(labels);
+      apiHttpRequestDurationSeconds.observe(labels, durationSeconds);
 
       if (res.status >= 500) {
-        httpRequestsErrorsTotal.inc({
-          method: req.method,
-          route: req.url || '/',
-          status: res.status,
-        });
+        apiHttpRequestsErrorsTotal.inc(labels);
       }
 
       return res;
+    } catch (err) {
+      const durationSeconds = Number(process.hrtime.bigint() - start) / 1e9;
+
+      const labels = {
+        method,
+        route,
+        status: '500',
+      };
+
+      apiHttpRequestsTotal.inc(labels);
+      apiHttpRequestDurationSeconds.observe(labels, durationSeconds);
+      apiHttpRequestsErrorsTotal.inc(labels);
+
+      throw err;
     } finally {
-      activeRequests.dec();
+      apiHttpRequestsInFlight.dec();
     }
   };

@@ -1,14 +1,8 @@
-networks:
-  sre-network:
-    driver: bridge
-
 services:
   mariadb:
     image: mariadb:latest
     container_name: x-mariadb
-    restart: unless-stopped
-    networks:
-      - sre-network
+    restart: always
     ports:
       - "3306:3306"
     environment:
@@ -29,15 +23,37 @@ services:
       retries: 10
       start_period: 40s
     volumes:
-      - ./x-data/mariadb:/var/lib/mysql
+      - mariadb-data:/var/lib/mysql
       - ./drizzle:/docker-entrypoint-initdb.d:ro
+    networks:
+      - sre-network
+
+  mariadb-exporter:
+    image: prom/mysqld-exporter:latest
+    container_name: x-mariadb-exporter
+    restart: always
+    depends_on:
+      - mariadb
+    volumes:
+      - ./x-docker/mariadb-exporter/my.cnf:/etc/.my.cnf:ro
+    command:
+      - "--config.my-cnf=/etc/.my.cnf"
+    ports:
+      - "9104:9104"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9104/metrics || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - sre-network
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: x-nextjs-app
-    restart: unless-stopped
+    restart: always
     networks:
       - sre-network
     depends_on:
@@ -46,12 +62,17 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: "mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mariadb:3306/${MYSQL_DATABASE}"
-    ports: 
+    ports:
       - "80:3000"
-      - "443:3000"
-      - "3000:3000"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
+
+networks:
+  sre-network:
+    external: true
+
+volumes:
+  mariadb-data:
